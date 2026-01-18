@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ryan's Art Portfolio</title>
+    <meta charset="utf-8">
+    <meta content='width=device-width, initial-scale=1' name='viewport'>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 40px;
+            background-color: #f4f4f4;
+        }
+
+        h1, h2 { text-align: center; }
+
+        #gallery {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        canvas {
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+            background-color: white; 
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Portfolio</h1>
+    <h2 id="counter">Loading...</h2>
+
+    <div id="gallery"></div>
+
+    <script>
+        const gallery = document.getElementById('gallery');
+        const counter = document.getElementById('counter');
+        let index = 1;
+
+        function loadNext() {
+            const img = new Image();
+            img.src = index + ".gif"; 
+
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                // CHANGED: Multiplier is now 0.5 for 1/2 size
+                const newWidth = Math.floor(img.naturalWidth * 0.5);
+                const newHeight = Math.floor(img.naturalHeight * 0.5);
+
+                canvas.width = newWidth;
+                canvas.height = newHeight;
+
+                // Disable smoothing for sharp pixels
+                ctx.imageSmoothingEnabled = false; 
+
+                ctx.drawImage(img, 0, 0, newWidth, newHeight);
+                gallery.appendChild(canvas);
+
+                counter.innerText = index + " Drawings"; 
+                index++;
+                loadNext(); 
+            };
+
+            img.onerror = function() {
+                console.log("Done loading.");
+                if(index === 1) { counter.innerText = "No images found."; }
+            };
+        }
+
+        loadNext();
+    </script>
+
+</body>
+</html>
