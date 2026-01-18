@@ -8,9 +8,8 @@
         /* --- LIGHT THEME STYLING --- */
         body {
             font-family: sans-serif;
-            /* CHANGED: Replaced fixed margin with responsive padding */
             margin: 0;
-            padding: 20px; 
+            padding: 20px;
             background-color: white;
             color: black;
             text-align: center;
@@ -19,7 +18,7 @@
         h2 { 
             margin-top: 40px; 
             text-transform: uppercase;
-            font-size: 1.5rem; /* slightly responsive font size */
+            font-size: 1.5rem;
         }
 
         /* --- FLEX GALLERY --- */
@@ -31,18 +30,24 @@
             min-height: 100px;
         }
 
-        canvas {
+        /* UPDATED: We are styling IMG tags now, not CANVAS */
+        .thumb-img {
             box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
             background-color: #f0f0f0;
             cursor: pointer;
             transition: opacity 0.2s ease-in-out;
             
-            /* NEW: This makes the canvases responsive! */
-            max-width: 100%; 
-            height: auto !important; /* Maintains aspect ratio */
+            /* Responsive sizing */
+            max-width: 100%;
+            height: auto; 
+            
+            /* This mimics your 50% size logic visually without breaking pixels */
+            /* You can adjust this max-height if thumbnails look too big/small */
+            max-height: 300px; 
+            object-fit: contain;
         }
 
-        canvas:hover { 
+        .thumb-img:hover { 
             opacity: 0.5;
         }
 
@@ -56,14 +61,13 @@
             background-color: rgba(0,0,0,0.85); 
             align-items: center;
             justify-content: center;
-            /* NEW: Backrdrop blur looks nice on iOS */
             backdrop-filter: blur(5px);
         }
 
         #modal-card {
             display: flex;
             flex-direction: row; 
-            position: relative; /* Needed for close button positioning */
+            position: relative;
             max-width: 90%;
             max-height: 90%;
             background: transparent;
@@ -75,9 +79,11 @@
             max-height: 80vh; 
             max-width: 65vw;  
             height: auto; width: auto;
+            
+            /* KEEP PIXELATED HERE: The big view should still be sharp */
             image-rendering: pixelated; 
+            
             background-color: black;
-            /* NEW: Prevent image from getting too small on mobile */
             min-width: 200px; 
         }
 
@@ -93,11 +99,9 @@
             justify-content: flex-start; 
             max-height: 80vh; 
             text-align: left;
-            /* NEW: Smooth scrolling for iOS */
             -webkit-overflow-scrolling: touch;
         }
 
-        /* NEW: Close Button Styling */
         .close-btn {
             position: absolute;
             top: -40px;
@@ -110,33 +114,32 @@
             padding: 5px 10px;
         }
 
-        /* --- MOBILE & TABLET TWEAKS --- */
         @media (max-width: 800px) {
-            body { padding: 10px; } /* Less padding on small screens */
+            body { padding: 10px; }
             
             #modal-card { 
                 flex-direction: column; 
                 align-items: center; 
-                background: white; /* Unified background for card feel */
+                background: white; 
             }
             
             #modal-img { 
                 max-width: 100%; 
-                max-height: 50vh; /* Leave room for text */
-                width: 100%; /* Stretch to fill card width */
+                max-height: 50vh; 
+                width: 100%; 
                 object-fit: contain;
             }
             
             #modal-desc { 
-                width: 100%; /* Fill the card width */
+                width: 100%; 
                 max-height: 30vh; 
-                box-sizing: border-box; /* Ensures padding doesn't break width */
+                box-sizing: border-box; 
             }
 
             .close-btn {
                 top: 0;
                 right: 0;
-                color: black; /* Black X because background is white on mobile */
+                color: black;
                 background: rgba(255,255,255,0.7);
                 border-radius: 0 0 0 5px;
             }
@@ -164,29 +167,22 @@
     </div>
 
     <script>
-        // --- GLOBAL ELEMENTS ---
         const modal = document.getElementById('modal');
         const modalImg = document.getElementById('modal-img');
         const sidebarContent = document.getElementById('sidebar-content');
-        const closeBtn = document.querySelector('.close-btn'); // NEW
+        const closeBtn = document.querySelector('.close-btn');
 
-        // --- CLOSE MODAL FUNCTIONS ---
         function closeModal() {
             modal.style.display = "none";
             modalImg.src = ""; 
         }
 
-        // Click outside to close
         modal.addEventListener('click', function(e) {
-            if (e.target.id === 'modal') {
-                closeModal();
-            }
+            if (e.target.id === 'modal') closeModal();
         });
 
-        // Click X button to close (NEW)
         closeBtn.addEventListener('click', closeModal);
 
-        // --- REUSABLE LOADER FUNCTION (Recursive) ---
         function loadCollection(prefix, ext, galleryId, titleId, index = 1) {
             
             const gallery = document.getElementById(galleryId);
@@ -195,25 +191,20 @@
             const imgFile = prefix + index + ext;
             const htmlFile = prefix + index + ".html";
 
-            const img = new Image();
-            img.src = imgFile; 
+            // Create a new Image object to check if file exists
+            const imgLoader = new Image();
+            imgLoader.src = imgFile; 
 
-            // SUCCESS
-            img.onload = function() {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
+            imgLoader.onload = function() {
+                // FIXED: Create a real <img> tag instead of a canvas
+                const thumb = document.createElement('img');
+                thumb.src = imgFile;
+                thumb.className = "thumb-img"; // Applies the CSS styles
                 
-                // Using 0.5 scale
-                const newWidth = Math.floor(img.naturalWidth * 0.5);
-                const newHeight = Math.floor(img.naturalHeight * 0.5);
-                canvas.width = newWidth;
-                canvas.height = newHeight;
-                ctx.imageSmoothingEnabled = false; 
-                ctx.drawImage(img, 0, 0, newWidth, newHeight);
-                gallery.appendChild(canvas);
+                gallery.appendChild(thumb);
 
                 // Add Click Event
-                canvas.addEventListener('click', function() {
+                thumb.addEventListener('click', function() {
                     modal.style.display = "flex"; 
                     modalImg.src = imgFile;
                     sidebarContent.innerHTML = "<em>Checking for description...</em>";
@@ -239,11 +230,11 @@
                     });
                 });
 
+                // Load next image
                 loadCollection(prefix, ext, galleryId, titleId, index + 1);
             };
 
-            // ERROR / FINISHED
-            img.onerror = function() {
+            imgLoader.onerror = function() {
                 const finalCount = index - 1;
                 if (galleryId === 'digital-gallery') {
                     title.innerText = finalCount + " Digital Drawings";
@@ -253,7 +244,6 @@
             };
         }
 
-        // --- START LOADERS ---
         loadCollection("", ".gif", "digital-gallery", "digital-title");
         loadCollection("r-", ".gif", "real-gallery", "real-title");
 
