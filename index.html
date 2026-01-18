@@ -7,17 +7,19 @@
     <style>
         /* --- LIGHT THEME STYLING --- */
         body {
-            font-family: sans-serif; /* Ensured sans-serif */
-            margin: 40px;
-            background-color: white; /* Changed to white */
-            color: black; /* Changed to black */
+            font-family: sans-serif;
+            /* CHANGED: Replaced fixed margin with responsive padding */
+            margin: 0;
+            padding: 20px; 
+            background-color: white;
+            color: black;
             text-align: center;
         }
 
         h2 { 
-            margin-top: 50px; 
-            /* Border lines removed here */
+            margin-top: 40px; 
             text-transform: uppercase;
+            font-size: 1.5rem; /* slightly responsive font size */
         }
 
         /* --- FLEX GALLERY --- */
@@ -26,20 +28,21 @@
             flex-wrap: wrap;
             justify-content: center;
             gap: 15px;
-            min-height: 100px; /* Keeps space while loading */
+            min-height: 100px;
         }
 
         canvas {
-            /* Lighter shadow for light theme */
             box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-            background-color: #f0f0f0; /* Slight grey background for canvas so it pops off white */
+            background-color: #f0f0f0;
             cursor: pointer;
-            /* Changed transition to animate opacity */
             transition: opacity 0.2s ease-in-out;
+            
+            /* NEW: This makes the canvases responsive! */
+            max-width: 100%; 
+            height: auto !important; /* Maintains aspect ratio */
         }
 
         canvas:hover { 
-             /* Makes it semi-transparent on hover */
             opacity: 0.5;
         }
 
@@ -50,15 +53,17 @@
             z-index: 1000; 
             left: 0; top: 0;
             width: 100%; height: 100%; 
-            /* Keep dark overlay so the modal pops */
             background-color: rgba(0,0,0,0.85); 
             align-items: center;
             justify-content: center;
+            /* NEW: Backrdrop blur looks nice on iOS */
+            backdrop-filter: blur(5px);
         }
 
         #modal-card {
             display: flex;
             flex-direction: row; 
+            position: relative; /* Needed for close button positioning */
             max-width: 90%;
             max-height: 90%;
             background: transparent;
@@ -72,6 +77,8 @@
             height: auto; width: auto;
             image-rendering: pixelated; 
             background-color: black;
+            /* NEW: Prevent image from getting too small on mobile */
+            min-width: 200px; 
         }
 
         #modal-desc {
@@ -85,13 +92,54 @@
             flex-direction: column;
             justify-content: flex-start; 
             max-height: 80vh; 
-            text-align: left; /* Keep description text left-aligned for readability */
+            text-align: left;
+            /* NEW: Smooth scrolling for iOS */
+            -webkit-overflow-scrolling: touch;
         }
 
+        /* NEW: Close Button Styling */
+        .close-btn {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            color: white;
+            font-size: 30px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1001;
+            padding: 5px 10px;
+        }
+
+        /* --- MOBILE & TABLET TWEAKS --- */
         @media (max-width: 800px) {
-            #modal-card { flex-direction: column; align-items: center; }
-            #modal-img { max-width: 90vw; max-height: 60vh; }
-            #modal-desc { width: 90vw; max-height: 30vh; }
+            body { padding: 10px; } /* Less padding on small screens */
+            
+            #modal-card { 
+                flex-direction: column; 
+                align-items: center; 
+                background: white; /* Unified background for card feel */
+            }
+            
+            #modal-img { 
+                max-width: 100%; 
+                max-height: 50vh; /* Leave room for text */
+                width: 100%; /* Stretch to fill card width */
+                object-fit: contain;
+            }
+            
+            #modal-desc { 
+                width: 100%; /* Fill the card width */
+                max-height: 30vh; 
+                box-sizing: border-box; /* Ensures padding doesn't break width */
+            }
+
+            .close-btn {
+                top: 0;
+                right: 0;
+                color: black; /* Black X because background is white on mobile */
+                background: rgba(255,255,255,0.7);
+                border-radius: 0 0 0 5px;
+            }
         }
     </style>
 </head>
@@ -105,9 +153,9 @@
     <h2 id="real-title">Loading Real...</h2>
     <div id="real-gallery" class="gallery-section"></div>
 
-
     <div id="modal">
         <div id="modal-card">
+            <span class="close-btn">&times;</span>
             <img id="modal-img" src="">
             <div id="modal-desc">
                 <div id="sidebar-content">Loading info...</div>
@@ -120,14 +168,23 @@
         const modal = document.getElementById('modal');
         const modalImg = document.getElementById('modal-img');
         const sidebarContent = document.getElementById('sidebar-content');
+        const closeBtn = document.querySelector('.close-btn'); // NEW
 
-        // --- MODAL CLICK TO CLOSE ---
+        // --- CLOSE MODAL FUNCTIONS ---
+        function closeModal() {
+            modal.style.display = "none";
+            modalImg.src = ""; 
+        }
+
+        // Click outside to close
         modal.addEventListener('click', function(e) {
             if (e.target.id === 'modal') {
-                modal.style.display = "none";
-                modalImg.src = ""; 
+                closeModal();
             }
         });
+
+        // Click X button to close (NEW)
+        closeBtn.addEventListener('click', closeModal);
 
         // --- REUSABLE LOADER FUNCTION (Recursive) ---
         function loadCollection(prefix, ext, galleryId, titleId, index = 1) {
@@ -141,11 +198,12 @@
             const img = new Image();
             img.src = imgFile; 
 
-            // SUCCESS: Image found, process it and load the NEXT one
+            // SUCCESS
             img.onload = function() {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                // Using 0.5 scale as per your previous code
+                
+                // Using 0.5 scale
                 const newWidth = Math.floor(img.naturalWidth * 0.5);
                 const newHeight = Math.floor(img.naturalHeight * 0.5);
                 canvas.width = newWidth;
@@ -154,7 +212,7 @@
                 ctx.drawImage(img, 0, 0, newWidth, newHeight);
                 gallery.appendChild(canvas);
 
-                // Add Click Event for Modal
+                // Add Click Event
                 canvas.addEventListener('click', function() {
                     modal.style.display = "flex"; 
                     modalImg.src = imgFile;
@@ -181,11 +239,10 @@
                     });
                 });
 
-                // RECURSION: Load the next image
                 loadCollection(prefix, ext, galleryId, titleId, index + 1);
             };
 
-            // ERROR: Image not found. We are done. Update Title.
+            // ERROR / FINISHED
             img.onerror = function() {
                 const finalCount = index - 1;
                 if (galleryId === 'digital-gallery') {
@@ -196,11 +253,8 @@
             };
         }
 
-        // --- START BOTH LOADERS ---
-        // 1. Digital: Looks for 1.gif, 2.gif...
+        // --- START LOADERS ---
         loadCollection("", ".gif", "digital-gallery", "digital-title");
-
-        // 2. Real: Looks for r-1.gif, r-2.gif...
         loadCollection("r-", ".gif", "real-gallery", "real-title");
 
     </script>
