@@ -5,73 +5,204 @@
     <meta charset="utf-8">
     <meta content='width=device-width, initial-scale=1' name='viewport'>
     <style>
+        /* --- LIGHT THEME STYLING --- */
         body {
-            font-family: sans-serif;
+            font-family: sans-serif; /* Ensured sans-serif */
             margin: 40px;
-            background-color: #f4f4f4;
+            background-color: white; /* Changed to white */
+            color: black; /* Changed to black */
+            text-align: center;
         }
 
-        h1, h2 { text-align: center; }
+        h2 { 
+            margin-top: 50px; 
+            /* Border lines removed here */
+            text-transform: uppercase;
+        }
 
-        #gallery {
+        /* --- FLEX GALLERY --- */
+        .gallery-section {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
             gap: 15px;
+            min-height: 100px; /* Keeps space while loading */
         }
 
         canvas {
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+            /* Lighter shadow for light theme */
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+            background-color: #f0f0f0; /* Slight grey background for canvas so it pops off white */
+            cursor: pointer;
+            /* Changed transition to animate opacity */
+            transition: opacity 0.2s ease-in-out;
+        }
+
+        canvas:hover { 
+             /* Makes it semi-transparent on hover */
+            opacity: 0.5;
+        }
+
+        /* --- MODAL STYLES --- */
+        #modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0; top: 0;
+            width: 100%; height: 100%; 
+            /* Keep dark overlay so the modal pops */
+            background-color: rgba(0,0,0,0.85); 
+            align-items: center;
+            justify-content: center;
+        }
+
+        #modal-card {
+            display: flex;
+            flex-direction: row; 
+            max-width: 90%;
+            max-height: 90%;
+            background: transparent;
+            box-shadow: 0 0 25px rgba(0,0,0,0.8);
+        }
+
+        #modal-img {
+            display: block;
+            max-height: 80vh; 
+            max-width: 65vw;  
+            height: auto; width: auto;
+            image-rendering: pixelated; 
+            background-color: black;
+        }
+
+        #modal-desc {
+            width: 300px; 
+            min-width: 200px;
             background-color: white; 
+            color: black;            
+            padding: 20px;
+            overflow-y: auto;        
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start; 
+            max-height: 80vh; 
+            text-align: left; /* Keep description text left-aligned for readability */
+        }
+
+        @media (max-width: 800px) {
+            #modal-card { flex-direction: column; align-items: center; }
+            #modal-img { max-width: 90vw; max-height: 60vh; }
+            #modal-desc { width: 90vw; max-height: 30vh; }
         }
     </style>
 </head>
 <body>
 
-    <h1>Portfolio</h1>
-    <h2 id="counter">Loading...</h2>
+    <h1>Ryan's Portfolio</h1>
 
-    <div id="gallery"></div>
+    <h2 id="digital-title">Loading Digital...</h2>
+    <div id="digital-gallery" class="gallery-section"></div>
+
+    <h2 id="real-title">Loading Real...</h2>
+    <div id="real-gallery" class="gallery-section"></div>
+
+
+    <div id="modal">
+        <div id="modal-card">
+            <img id="modal-img" src="">
+            <div id="modal-desc">
+                <div id="sidebar-content">Loading info...</div>
+            </div>
+        </div>
+    </div>
 
     <script>
-        const gallery = document.getElementById('gallery');
-        const counter = document.getElementById('counter');
-        let index = 1;
+        // --- GLOBAL ELEMENTS ---
+        const modal = document.getElementById('modal');
+        const modalImg = document.getElementById('modal-img');
+        const sidebarContent = document.getElementById('sidebar-content');
 
-        function loadNext() {
+        // --- MODAL CLICK TO CLOSE ---
+        modal.addEventListener('click', function(e) {
+            if (e.target.id === 'modal') {
+                modal.style.display = "none";
+                modalImg.src = ""; 
+            }
+        });
+
+        // --- REUSABLE LOADER FUNCTION (Recursive) ---
+        function loadCollection(prefix, ext, galleryId, titleId, index = 1) {
+            
+            const gallery = document.getElementById(galleryId);
+            const title = document.getElementById(titleId);
+            
+            const imgFile = prefix + index + ext;
+            const htmlFile = prefix + index + ".html";
+
             const img = new Image();
-            img.src = index + ".gif"; 
+            img.src = imgFile; 
 
+            // SUCCESS: Image found, process it and load the NEXT one
             img.onload = function() {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-
-                // CHANGED: Multiplier is now 0.5 for 1/2 size
+                // Using 0.5 scale as per your previous code
                 const newWidth = Math.floor(img.naturalWidth * 0.5);
                 const newHeight = Math.floor(img.naturalHeight * 0.5);
-
                 canvas.width = newWidth;
                 canvas.height = newHeight;
-
-                // Disable smoothing for sharp pixels
                 ctx.imageSmoothingEnabled = false; 
-
                 ctx.drawImage(img, 0, 0, newWidth, newHeight);
                 gallery.appendChild(canvas);
 
-                counter.innerText = index + " Drawings"; 
-                index++;
-                loadNext(); 
+                // Add Click Event for Modal
+                canvas.addEventListener('click', function() {
+                    modal.style.display = "flex"; 
+                    modalImg.src = imgFile;
+                    sidebarContent.innerHTML = "<em>Checking for description...</em>";
+
+                    fetch(htmlFile)
+                    .then(response => {
+                        if (!response.ok) throw new Error("No description");
+                        return response.text();
+                    })
+                    .then(htmlText => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(htmlText, 'text/html');
+                        const descDiv = doc.getElementById('description') || doc.querySelector('[tag="description"]');
+                        
+                        if (descDiv) {
+                            sidebarContent.innerHTML = descDiv.innerHTML;
+                        } else {
+                            sidebarContent.innerHTML = "<em>Found file, but missing &lt;div id='description'&gt;</em>";
+                        }
+                    })
+                    .catch(err => {
+                        sidebarContent.innerHTML = "<p>No description text found.</p>";
+                    });
+                });
+
+                // RECURSION: Load the next image
+                loadCollection(prefix, ext, galleryId, titleId, index + 1);
             };
 
+            // ERROR: Image not found. We are done. Update Title.
             img.onerror = function() {
-                console.log("Done loading.");
-                if(index === 1) { counter.innerText = "No images found."; }
+                const finalCount = index - 1;
+                if (galleryId === 'digital-gallery') {
+                    title.innerText = finalCount + " Digital Drawings";
+                } else {
+                    title.innerText = finalCount + " Real Drawings";
+                }
             };
         }
 
-        loadNext();
-    </script>
+        // --- START BOTH LOADERS ---
+        // 1. Digital: Looks for 1.gif, 2.gif...
+        loadCollection("", ".gif", "digital-gallery", "digital-title");
 
+        // 2. Real: Looks for r-1.gif, r-2.gif...
+        loadCollection("r-", ".gif", "real-gallery", "real-title");
+
+    </script>
 </body>
 </html>
