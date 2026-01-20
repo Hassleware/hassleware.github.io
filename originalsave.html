@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ryan's Art Portfolio</title>
+    <meta charset="utf-8">
+    <meta content='width=device-width, initial-scale=1' name='viewport'>
+    <style>
+        /* --- LIGHT THEME STYLING --- */
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: white;
+            color: black;
+            text-align: center;
+        }
+
+        h2 { 
+            margin-top: 40px; 
+            text-transform: uppercase;
+            font-size: 1.5rem;
+        }
+
+        /* --- FLEX GALLERY --- */
+        .gallery-section {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            min-height: 100px;
+        }
+
+        /* UPDATED: We are styling IMG tags now, not CANVAS */
+        .thumb-img {
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+            background-color: #f0f0f0;
+            cursor: pointer;
+            transition: opacity 0.2s ease-in-out;
+            
+            /* Responsive sizing */
+            max-width: 100%;
+            height: auto; 
+            
+            /* This mimics your 50% size logic visually without breaking pixels */
+            /* You can adjust this max-height if thumbnails look too big/small */
+            max-height: 300px; 
+            object-fit: contain;
+        }
+
+        .thumb-img:hover { 
+            opacity: 0.5;
+        }
+
+        /* --- MODAL STYLES --- */
+        #modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0; top: 0;
+            width: 100%; height: 100%; 
+            background-color: rgba(0,0,0,0.85); 
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+
+        #modal-card {
+            display: flex;
+            flex-direction: row; 
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+            background: transparent;
+            box-shadow: 0 0 25px rgba(0,0,0,0.8);
+        }
+
+        #modal-img {
+            display: block;
+            max-height: 80vh; 
+            max-width: 65vw;  
+            height: auto; width: auto;
+            
+            /* KEEP PIXELATED HERE: The big view should still be sharp */
+            image-rendering: pixelated; 
+            
+            background-color: black;
+            min-width: 200px; 
+        }
+
+        #modal-desc {
+            width: 300px; 
+            min-width: 200px;
+            background-color: white; 
+            color: black;            
+            padding: 20px;
+            overflow-y: auto;        
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start; 
+            max-height: 80vh; 
+            text-align: left;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            color: white;
+            font-size: 30px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1001;
+            padding: 5px 10px;
+        }
+
+        @media (max-width: 800px) {
+            body { padding: 10px; }
+            
+            #modal-card { 
+                flex-direction: column; 
+                align-items: center; 
+                background: white; 
+            }
+            
+            #modal-img { 
+                max-width: 100%; 
+                max-height: 50vh; 
+                width: 100%; 
+                object-fit: contain;
+            }
+            
+            #modal-desc { 
+                width: 100%; 
+                max-height: 30vh; 
+                box-sizing: border-box; 
+            }
+
+            .close-btn {
+                top: 0;
+                right: 0;
+                color: black;
+                background: rgba(255,255,255,0.7);
+                border-radius: 0 0 0 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Ryan's Portfolio</h1>
+
+    <h2 id="digital-title">Loading Digital...</h2>
+    <div id="digital-gallery" class="gallery-section"></div>
+
+    <h2 id="real-title">Loading Real...</h2>
+    <div id="real-gallery" class="gallery-section"></div>
+
+    <div id="modal">
+        <div id="modal-card">
+            <span class="close-btn">&times;</span>
+            <img id="modal-img" src="">
+            <div id="modal-desc">
+                <div id="sidebar-content">Loading info...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const modal = document.getElementById('modal');
+        const modalImg = document.getElementById('modal-img');
+        const sidebarContent = document.getElementById('sidebar-content');
+        const closeBtn = document.querySelector('.close-btn');
+
+        function closeModal() {
+            modal.style.display = "none";
+            modalImg.src = ""; 
+        }
+
+        modal.addEventListener('click', function(e) {
+            if (e.target.id === 'modal') closeModal();
+        });
+
+        closeBtn.addEventListener('click', closeModal);
+
+        function loadCollection(prefix, ext, galleryId, titleId, index = 1) {
+            
+            const gallery = document.getElementById(galleryId);
+            const title = document.getElementById(titleId);
+            
+            const imgFile = prefix + index + ext;
+            const htmlFile = prefix + index + ".html";
+
+            // Create a new Image object to check if file exists
+            const imgLoader = new Image();
+            imgLoader.src = imgFile; 
+
+            imgLoader.onload = function() {
+                // FIXED: Create a real <img> tag instead of a canvas
+                const thumb = document.createElement('img');
+                thumb.src = imgFile;
+                thumb.className = "thumb-img"; // Applies the CSS styles
+                
+                gallery.appendChild(thumb);
+
+                // Add Click Event
+                thumb.addEventListener('click', function() {
+                    modal.style.display = "flex"; 
+                    modalImg.src = imgFile;
+                    sidebarContent.innerHTML = "<em>Checking for description...</em>";
+
+                    fetch(htmlFile)
+                    .then(response => {
+                        if (!response.ok) throw new Error("No description");
+                        return response.text();
+                    })
+                    .then(htmlText => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(htmlText, 'text/html');
+                        const descDiv = doc.getElementById('description') || doc.querySelector('[tag="description"]');
+                        
+                        if (descDiv) {
+                            sidebarContent.innerHTML = descDiv.innerHTML;
+                        } else {
+                            sidebarContent.innerHTML = "<em>Found file, but missing &lt;div id='description'&gt;</em>";
+                        }
+                    })
+                    .catch(err => {
+                        sidebarContent.innerHTML = "<p>No description text found.</p>";
+                    });
+                });
+
+                // Load next image
+                loadCollection(prefix, ext, galleryId, titleId, index + 1);
+            };
+
+            imgLoader.onerror = function() {
+                const finalCount = index - 1;
+                if (galleryId === 'digital-gallery') {
+                    title.innerText = finalCount + " Digital Drawings";
+                } else {
+                    title.innerText = finalCount + " Real Drawings";
+                }
+            };
+        }
+
+        loadCollection("", ".gif", "digital-gallery", "digital-title");
+        loadCollection("r-", ".gif", "real-gallery", "real-title");
+
+    </script>
+</body>
+</html>
